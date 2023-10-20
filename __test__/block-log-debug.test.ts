@@ -1,7 +1,6 @@
 import {
-  describe, test, expect, beforeAll, beforeEach
+  describe, test, expect, beforeAll, beforeEach,
 } from '@jest/globals';
-import * as algokit from '@algorandfoundation/algokit-utils';
 import algosdk from 'algosdk';
 import { algorandFixture } from '@algorandfoundation/algokit-utils/testing';
 import { BlockLogDebugClient } from '../contracts/clients/BlockLogDebugClient';
@@ -12,35 +11,47 @@ let appClient: BlockLogDebugClient;
 
 describe('BlockLogDebug', () => {
   beforeEach(fixture.beforeEach);
+  let sender: algosdk.Account;
 
   beforeAll(async () => {
     await fixture.beforeEach();
     const { algod, testAccount } = fixture.context;
-    const sender = algosdk.generateAccount();
+    sender = testAccount;
 
     appClient = new BlockLogDebugClient(
       {
-        sender: testAccount,
+        sender,
         resolveBy: 'id',
         id: 0,
       },
       algod,
     );
-
-    await appClient.create.createApplication({});
   });
 
   test('sum', async () => {
-    const a = 13;
-    const b = 37;
-    const sum = await appClient.doMath({ a, b, operation: 'sum' });
-    expect(sum.return?.valueOf()).toBe(BigInt(a + b));
-  });
+    const result = await appClient.create.createApplication({});
 
-  test('difference', async () => {
-    const a = 13;
-    const b = 37;
-    const diff = await appClient.doMath({ a, b, operation: 'difference' });
-    expect(diff.return?.valueOf()).toBe(BigInt(a >= b ? a - b : b - a));
+    const lastRound = (await fixture.context.algod.status().do())['last-round'];
+
+    const fetchResult = await fetch(`http://localhost:4001/v2/blocks/${lastRound}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Algo-API-Token': 'a'.repeat(64),
+      },
+    });
+
+    const block = await fetchResult.json();
+
+    const logFromBlock = block.block.txns[0].dt.lg[0];
+    const logFromTxn = result.confirmation!.logs![0];
+
+    const logBytes = new Uint8Array(Buffer.from(logFromBlock));
+
+    // For some reason the length of the log from the block is not always 32!
+    expect(logFromBlock.length).toBe(32);
+    expect(logBytes).toEqual(logFromTxn);
+    expect(logBytes).toEqual(algosdk.decodeAddress(sender.addr).publicKey);
+    expect(algosdk.encodeAddress(Buffer.from(logFromBlock))).toBe(sender.addr);
   });
 });
