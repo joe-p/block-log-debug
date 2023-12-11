@@ -4,6 +4,7 @@ import {
 import algosdk from 'algosdk';
 import { algorandFixture } from '@algorandfoundation/algokit-utils/testing';
 import { unpack } from 'msgpackr';
+import { microAlgos } from '@algorandfoundation/algokit-utils';
 import { BlockLogDebugClient } from '../contracts/clients/BlockLogDebugClient';
 
 const fixture = algorandFixture();
@@ -32,6 +33,9 @@ describe('/blocks/{round}/logs', () => {
     );
 
     await appClient.create.createApplication({});
+    await appClient.appClient.fundAppAccount({ amount: microAlgos(200_000) });
+    await appClient.emitLogs({}, { sendParams: { fee: microAlgos(2_000) } });
+
     const lastRound = (await fixture.context.algod.status().do())['last-round'];
 
     const fetchResult = await fetch(`http://localhost:4001/v2/blocks/${lastRound}/logs`, {
@@ -41,10 +45,19 @@ describe('/blocks/{round}/logs', () => {
       },
     });
 
-    const logFromResponse = (await fetchResult.json()).logs[0].logs[0];
-    const hexLog = Buffer.from(logFromResponse, 'base64').toString('hex');
+    const logsFromResponse = (await fetchResult.json()).logs;
 
-    expect(hexLog).toEqual('deadbeef');
+    const logFromResponse = logsFromResponse[0]?.logs[0];
+    expect(logFromResponse).toBeDefined();
+
+    const hexLog = Buffer.from(logFromResponse, 'base64').toString('hex');
+    expect(hexLog).toEqual('d00d2bad');
+
+    const innerLogFromResponse = logsFromResponse[1]?.logs[0];
+    expect(innerLogFromResponse).toBeDefined();
+
+    const innerHexLog = Buffer.from(innerLogFromResponse, 'base64').toString('hex');
+    expect(innerHexLog).toEqual('deadbeef');
   });
 });
 

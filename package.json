@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "generate-client": "algokitgen generate -a contracts/artifacts/BlockLogDebug.json -o contracts/clients/BlockLogDebugClient.ts",
+    "generate-client": "algokitgen generate -a contracts/artifacts/BlockLogDebug.arc32.json -o contracts/clients/BlockLogDebugClient.ts",
     "compile-contract": "tealscript contracts/block-log-debug.algo.ts contracts/artifacts",
-    "generate-components": "algokit-generate-component contracts/artifacts/BlockLogDebug.json contracts/artifacts/components",
+    "generate-components": "algokit-generate-component contracts/artifacts/BlockLogDebug.arc32.json contracts/artifacts/components",
     "build": "npm run compile-contract && npm run generate-client",
     "test": "npm run build && jest",
     "lint": "eslint . --ext .ts",
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@algorandfoundation/algokit-client-generator": "^2.2.1",
-    "@algorandfoundation/tealscript": "^0.54.0",
+    "@algorandfoundation/tealscript": "^0.66.0",
     "@jest/globals": "^29.5.0",
     "@joe-p/algokit-generate-component": "^0.2.0",
     "@typescript-eslint/eslint-plugin": "^5.13.0",
