@@ -9,7 +9,7 @@ import { BlockLogDebugClient } from '../contracts/clients/BlockLogDebugClient';
 
 const fixture = algorandFixture();
 
-describe('/blocks/{round}/logs', () => {
+describe('algod /blocks/{round}/logs', () => {
   beforeEach(fixture.beforeEach);
   let sender: algosdk.Account;
 
@@ -61,7 +61,7 @@ describe('/blocks/{round}/logs', () => {
   });
 });
 
-describe('/blocks/{round}', () => {
+describe('algod /blocks/{round}', () => {
   beforeEach(fixture.beforeEach);
   let sender: algosdk.Account;
 
@@ -129,6 +129,52 @@ describe('/blocks/{round}', () => {
 
     const logFromResponse = (await fetchResult.json()).block.txns[0].dt.lg[0];
     const hexLog = Buffer.from(logFromResponse).toString('hex');
+
+    expect(hexLog).toEqual('deadbeef');
+  });
+});
+
+describe('indexer', () => {
+  beforeEach(fixture.beforeEach);
+  let sender: algosdk.Account;
+
+  beforeAll(async () => {
+    await fixture.beforeEach();
+    const { testAccount } = fixture.context;
+
+    sender = testAccount;
+  });
+
+  test('/blocks/{round}', async () => {
+    const { algod } = fixture.context;
+
+    const appClient = new BlockLogDebugClient(
+      {
+        sender,
+        resolveBy: 'id',
+        id: 0,
+      },
+      algod,
+    );
+
+    await appClient.create.createApplication({});
+    const lastRound = (await fixture.context.algod.status().do())['last-round'];
+
+    // eslint-disable-next-line no-promise-executor-return
+    await new Promise((r) => setTimeout(r, 1000));
+
+    const fetchResult = await fetch(`http://localhost:8980/v2/blocks/${lastRound}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'text/plain',
+        'X-Algo-API-Token': 'a'.repeat(64),
+      },
+    });
+
+    const json = await fetchResult.json();
+
+    const logFromResponse = json.transactions[0].logs[0];
+    const hexLog = Buffer.from(logFromResponse, 'base64').toString('hex');
 
     expect(hexLog).toEqual('deadbeef');
   });
